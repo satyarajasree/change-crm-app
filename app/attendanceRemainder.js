@@ -177,7 +177,7 @@ export default function attendanceReminder() {
     setShowDatePicker(false);
     const currentDate = selectedDate || chosenDate;
     setChosenDate(currentDate);
-    const formattedDate = currentDate.toISOString().split("T")[0]; // Format to YYYY-MM-DD
+    const formattedDate = currentDate.toISOString().split("T")[0]; 
     setStartDate(formattedDate); // Update startDate to reflect the chosen date
     setDate(formattedDate); // Update date used for submission
   };
@@ -203,7 +203,7 @@ export default function attendanceReminder() {
           onDayPress={handleDayPress}
           theme={{
             selectedDayBackgroundColor: "#35374B",
-            todayTextColor: "#35374B",
+            todayTextColor: "#35374B", 
             arrowColor: "#35374B",
           }}
         />

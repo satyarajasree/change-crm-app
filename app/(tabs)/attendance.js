@@ -15,8 +15,7 @@ export default function attendance() {
   const fetchPunch = async () => {
     try {
       const token = await SecureStore.getItemAsync("jwtToken");
-      const employee = await SecureStore.getItemAsync("employee");
-      
+
       if (!token) {
         throw new Error("Authentication token not found");
       }
@@ -26,26 +25,23 @@ export default function attendance() {
         headers: {
           Authorization: `Bearer ${formattedToken}`,
         },
-        
       });
 
       setPunch(response.data);
-      markCalendar(response.data, JSON.parse(employee).branchName);
+      markCalendar(response.data);
     } catch (err) {
       setError(err.message || "Failed to fetch punch activities");
     }
   };
 
-  const markCalendar = (punchData, branchName) => {
+  const markCalendar = (punchData) => {
     const dates = {};
     const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
-  
-    // Mark present, absent, and in-progress days
+
     punchData.forEach((record) => {
       const punchDate = new Date(record.date).toISOString().split('T')[0];
-  
+
       if (record.punchInImagePresent && record.punchOutImagePresent) {
-        // Case: Both punch-in and punch-out images are present (Present)
         dates[punchDate] = {
           customStyles: {
             container: { backgroundColor: 'lightgreen' },
@@ -53,7 +49,6 @@ export default function attendance() {
           },
         };
       } else if (record.punchInImagePresent && !record.punchOutImagePresent) {
-        // Case: Only punch-in image is present (In Progress)
         dates[punchDate] = {
           customStyles: {
             container: { backgroundColor: 'yellow' },
@@ -62,11 +57,10 @@ export default function attendance() {
         };
       }
     });
-  
+
     punchData.forEach((record) => {
       const punchDate = new Date(record.date).toISOString().split('T')[0];
       if (!record.punchOutImagePresent && punchDate < today) {
-        // Case: No punch-out for past days (Absent)
         dates[punchDate] = {
           customStyles: {
             container: { backgroundColor: 'red' },
@@ -75,40 +69,11 @@ export default function attendance() {
         };
       }
     });
-  
-    // Determine the branch and set the appropriate holiday
-    const isHyderabadBranch = branchName.toLowerCase() === "hyderabad";
-    const isVijayawadaBranch = branchName.toLowerCase() === "vijayawada";
-  
-    const startDate = new Date('2024-01-01');
-    const endDate = new Date('2024-12-31');
-  
-    for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
-      const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 5 = Friday
-      const formattedDate = date.toISOString().split('T')[0];
-  
-      if (isHyderabadBranch && dayOfWeek === 1 && !dates[formattedDate]) {
-        // Monday as Paid Leave for Hyderabad branch
-        dates[formattedDate] = {
-          customStyles: {
-            container: { backgroundColor: 'orange' },
-            text: { color: 'white', fontWeight: 'bold' },
-          },
-        };
-      } else if (isVijayawadaBranch && dayOfWeek === 5 && !dates[formattedDate]) {
-        // Friday as Paid Leave for Vijayawada branch
-        dates[formattedDate] = {
-          customStyles: {
-            container: { backgroundColor: 'orange' },
-            text: { color: 'white', fontWeight: 'bold' },
-          },
-        };
-      }
-    }
-  
-    setMarkedDates(dates); // Update state with marked dates
+
+    console.log(dates); // Debug: Log marked dates
+    setMarkedDates(dates);
   };
-  
+
   useEffect(() => {
     fetchPunch();
   }, []);
