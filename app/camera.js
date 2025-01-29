@@ -32,7 +32,7 @@ const camera = () => {
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: false,
       aspect: [4, 3],
-      quality: 0.2,
+      quality: 0.1,
     });
 
     if (!result.canceled) {

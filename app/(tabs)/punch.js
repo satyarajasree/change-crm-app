@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import LottieView from "lottie-react-native";
 import * as SecureStore from "expo-secure-store";
+import axios from "axios";
+import { API_BASE_URL } from "../api";
 
 const { width } = Dimensions.get("screen");
 
@@ -18,6 +20,8 @@ const punch = () => {
   const animation = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
   const [punch, setPunch] = useState([]);
+  const [holidays, setHolidays] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     animation.current?.play();
@@ -30,6 +34,26 @@ const punch = () => {
       setRefreshing(false);
     }, 2000);
   };
+
+  const getHolidays = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/crm/admin/holidays`);
+      if (response.data) {
+        setHolidays(response.data);
+        setError(null); // Clear error if data fetch is successful
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch holidays.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false); // Stop the refresh animation
+    }
+  };
+
+  useEffect(() => {
+      getHolidays();
+    }, []);
 
   const fetchPunch = async () => {
     try {
@@ -50,7 +74,6 @@ const punch = () => {
       );
 
       setPunch(response.data);
-      console.log(response);
     } catch (err) {
       setError(err.message || "Failed to fetch punch activities");
     }

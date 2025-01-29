@@ -103,13 +103,13 @@ const WorkReport = () => {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
+  
     setLoading(true);
     try {
       const token = await SecureStore.getItemAsync("jwtToken");
       if (!token) throw new Error("Authentication token not found");
       const formattedToken = token.replace(/^"|"$/g, "");
-
+  
       const requestData = {
         date: date.toISOString(),
         nameOfPerson,
@@ -120,7 +120,7 @@ const WorkReport = () => {
         latitude: location?.latitude,
         longitude: location?.longitude,
       };
-
+  
       await axios.post(
         `${API_BASE_URL}/crm/employee/add-work-report`,
         requestData,
@@ -128,14 +128,24 @@ const WorkReport = () => {
           headers: { Authorization: `Bearer ${formattedToken}` },
         }
       );
-
+  
       Alert.alert("Success", "Work report submitted successfully.");
+  
+      // Reset form state
+      setDate(new Date());
+      setNameOfPerson("");
+      setProjectName("");
+      setRemarks("");
+      setWorkReport("");
+      setReminderDate(new Date());
+      setLocation(null); // Optionally reset location if needed
     } catch (err) {
       Alert.alert("Error", err.response?.data?.message || "An error occurred.");
     } finally {
       setLoading(false);
     }
   };
+  
 
   const department = employee?.departments?.department;
 

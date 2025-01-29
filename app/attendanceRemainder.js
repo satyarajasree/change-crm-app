@@ -178,8 +178,8 @@ export default function attendanceReminder() {
     const currentDate = selectedDate || chosenDate;
     setChosenDate(currentDate);
     const formattedDate = currentDate.toISOString().split("T")[0]; 
-    setStartDate(formattedDate); // Update startDate to reflect the chosen date
-    setDate(formattedDate); // Update date used for submission
+    setStartDate(formattedDate); 
+    setDate(formattedDate); 
   };
 
   return (

@@ -11,10 +11,54 @@ export default function attendance() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDateContent, setSelectedDateContent] = useState(null);
+  const [holidays, setHolidays] = useState([]);
+  const [employee, setEmployee] = useState(null);
+
+   const fetchEmployee = async () => {
+      try {
+        const employeeData = await SecureStore.getItemAsync("employee");
+        
+        if (employeeData) {
+          setEmployee(JSON.parse(employeeData)); 
+          console.log(employeeData);
+        
+        } else {
+          console.error("No employee data found");
+        }
+      } catch (error) {
+        console.error("Error retrieving employee data:", error);
+      }
+    };
+  
+    useEffect(() => {
+        fetchEmployee(); // Fetch employee details on component mount
+      }, []);
+
+  const getHolidays = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/crm/admin/holidays`);
+      if (response.data) {
+        setHolidays(response.data);
+        setError(null); // Clear error if data fetch is successful
+        console.log(holidays)
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch holidays.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false); // Stop the refresh animation
+    }
+  };
+
+  useEffect(() => {
+      getHolidays();
+    }, []);
 
   const fetchPunch = async () => {
     try {
       const token = await SecureStore.getItemAsync("jwtToken");
+      
 
       if (!token) {
         throw new Error("Authentication token not found");
@@ -37,11 +81,16 @@ export default function attendance() {
   const markCalendar = (punchData) => {
     const dates = {};
     const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
-
+  
+    // Create a set of all punched dates for easier lookup
+    const punchedDates = new Set(punchData.map((record) => new Date(record.date).toISOString().split('T')[0]));
+  
+    // Mark Punch Data
     punchData.forEach((record) => {
       const punchDate = new Date(record.date).toISOString().split('T')[0];
-
+  
       if (record.punchInImagePresent && record.punchOutImagePresent) {
+        // Fully completed punch data
         dates[punchDate] = {
           customStyles: {
             container: { backgroundColor: 'lightgreen' },
@@ -49,30 +98,82 @@ export default function attendance() {
           },
         };
       } else if (record.punchInImagePresent && !record.punchOutImagePresent) {
-        dates[punchDate] = {
-          customStyles: {
-            container: { backgroundColor: 'yellow' },
-            text: { color: 'black', fontWeight: 'bold' },
-          },
-        };
+        // "In Progress" for the day
+        if (punchDate === today) {
+          dates[punchDate] = {
+            customStyles: {
+              container: { backgroundColor: 'yellow' },
+              text: { color: 'black', fontWeight: 'bold' },
+            },
+          };
+        } else if (punchDate < today) {
+          // Mark "Absent" for previous days without punch out
+          dates[punchDate] = {
+            customStyles: {
+              container: { backgroundColor: 'red' },
+              text: { color: 'white', fontWeight: 'bold' },
+            },
+          };
+        }
       }
     });
-
-    punchData.forEach((record) => {
-      const punchDate = new Date(record.date).toISOString().split('T')[0];
-      if (!record.punchOutImagePresent && punchDate < today) {
-        dates[punchDate] = {
+  
+    // Check for dates with no punch data at all and mark them as Absent
+    const firstDate = new Date(Math.min(...punchData.map((record) => new Date(record.date)))); // First date in punch data
+    const lastDate = new Date(today); // Up to today
+  
+    for (let d = new Date(firstDate); d <= lastDate; d.setDate(d.getDate() + 1)) {
+      const currentDate = d.toISOString().split('T')[0];
+      if (!punchedDates.has(currentDate)) {
+        // Mark missing punch dates as Absent (Red)
+        dates[currentDate] = {
           customStyles: {
             container: { backgroundColor: 'red' },
             text: { color: 'white', fontWeight: 'bold' },
           },
         };
       }
+    }
+  
+    // Mark Holidays from API
+    holidays.forEach((holiday) => {
+      const holidayDate = holiday.holidayDate;
+      dates[holidayDate] = {
+        customStyles: {
+          container: { backgroundColor: 'orange' },
+          text: { color: 'white', fontWeight: 'bold' },
+        },
+      };
     });
-
-    console.log(dates); // Debug: Log marked dates
+  
+    // Add Mondays or Fridays as Holidays Based on Branch
+    const branchHoliday = employee?.branch?.branchName === "Hyderabad" ? 1 : employee?.branch?.branchName === "Vijayawada" ? 5 : null;
+    if (branchHoliday !== null) {
+      const year = new Date().getFullYear();
+  
+      for (let month = 0; month < 12; month++) {
+        let date = new Date(year, month, 1);
+  
+        while (date.getMonth() === month) {
+          if (date.getDay() === branchHoliday) {
+            const holidayDate = date.toISOString().split('T')[0];
+            dates[holidayDate] = {
+              customStyles: {
+                container: { backgroundColor: 'orange' },
+                text: { color: 'white', fontWeight: 'bold' },
+              },
+            };
+          }
+          date.setDate(date.getDate() + 1); // Move to the next day
+        }
+      }
+    }
+  
     setMarkedDates(dates);
   };
+  
+  
+  
 
   useEffect(() => {
     fetchPunch();
